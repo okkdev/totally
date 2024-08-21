@@ -118,7 +118,7 @@ pub fn totp_from_config(config: TOTPConfig) -> OTP {
   |> OTP
 }
 
-pub fn valid(totp_input: String, secret: Secret) -> Bool {
+pub fn verify(totp_input: String, secret: Secret) -> Bool {
   totp(secret) == OTP(totp_input)
 }
 

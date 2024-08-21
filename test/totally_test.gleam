@@ -135,16 +135,16 @@ pub fn valid_test() {
 
   totally.totp(secret)
   |> totally.otp_to_string
-  |> totally.valid(secret)
+  |> totally.verify(secret)
   |> should.be_true
 
   "123"
-  |> totally.valid(secret)
+  |> totally.verify(secret)
   |> should.be_false
 }
 
 pub fn otpauth_uri_test() {
-  totally.otpauth_uri(secret, "issuer", "account")
+  totally.otpauth_uri(secret, issuer: "issuer", account: "account")
   |> should.equal(
     "otpauth://totp/issuer:account?secret=JKVVN7MCLQ4OJFTNCZUGAESASCDAJII2&issuer=issuer&algorithm=SHA1&digits=6&period=30",
   )
