@@ -3,7 +3,7 @@
 [![Package Version](https://img.shields.io/hexpm/v/totally)](https://hex.pm/packages/totally)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/totally/)
 
-totally (TOTP+ally) is a TOTP (Time-based One-Time Password) library for Gleam (Erlang & Javascript targets).
+totally (TOTP+ally) is a TOTP (Time-based One-Time Password) library for Gleam (Erlang & Javascript(Node) targets).
 
 Implements the [TOTP RFC6238](https://datatracker.ietf.org/doc/html/rfc6238)
 

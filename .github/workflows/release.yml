@@ -15,6 +15,7 @@ jobs:
           otp-version: "27"
           gleam-version: "1.4.0"
           rebar3-version: "3.23"
+      - uses: actions/setup-node@v4
       - run: cargo install tomlq
       - run: |
           if [ "v$(tomlq version -f gleam.toml)" == "${{ github.ref_name }}" ]; then
@@ -24,7 +25,7 @@ jobs:
           exit 1
       - run: gleam format --check src test
       - run: gleam test --target erlang
-      - run: gleam test --target javascript
+      - run: gleam test --target javascript --runtime node
       - run: gleam publish -y
         env:
           HEXPM_USER: ${{ secrets.HEX_USERNAME }}
