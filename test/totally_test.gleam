@@ -133,13 +133,14 @@ pub fn string_test() {
 pub fn valid_test() {
   let secret = totally.secret()
 
-  totally.totp(secret)
-  |> totally.otp_to_string
-  |> totally.verify(secret)
+  let input =
+    totally.totp(secret)
+    |> totally.otp_to_string
+
+  totally.verify(secret, input)
   |> should.be_true
 
-  "123"
-  |> totally.verify(secret)
+  totally.verify(secret, "123")
   |> should.be_false
 }
 

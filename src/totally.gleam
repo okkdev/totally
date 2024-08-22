@@ -11,16 +11,19 @@ import gleam/uri
 type Secret =
   BitArray
 
+/// One Time Password type
 pub opaque type OTP {
   OTP(String)
 }
 
+/// Algorithm used for the hash function
 pub type TOTPAlgorithm {
   Sha1
   Sha256
   Sha512
 }
 
+/// Configuration for the TOTP
 pub type TOTPConfig {
   TOTPConfig(
     secret: Secret,
@@ -33,6 +36,9 @@ pub type TOTPConfig {
   )
 }
 
+/// Creates a default configuration for TOTP with the following values:
+/// algorithm: Sha1, period: 30, digits: 6. These are the most commonly used TOTP settings.
+/// Please set the secret and time with the `set_secret` and `set_time_now` or manually `set_time` functions.
 pub fn default_config() -> TOTPConfig {
   TOTPConfig(
     secret: bit_array.from_string(""),
@@ -45,46 +51,63 @@ pub fn default_config() -> TOTPConfig {
   )
 }
 
+/// Sets the secret for the TOTP configuration.
 pub fn set_secret(config: TOTPConfig, secret: Secret) -> TOTPConfig {
   TOTPConfig(..config, secret: secret)
 }
 
+/// Sets the issuer for the TOTP configuration.
+/// Used for the otpauth URI.
 pub fn set_issuer(config: TOTPConfig, issuer: String) -> TOTPConfig {
   TOTPConfig(..config, issuer: issuer)
 }
 
+/// Sets the account for the TOTP configuration.
 pub fn set_account(config: TOTPConfig, account: String) -> TOTPConfig {
   TOTPConfig(..config, account: account)
 }
 
+/// Sets the time in unix timestamp seconds for the TOTP configuration.
 pub fn set_time(config: TOTPConfig, time: Int) -> TOTPConfig {
   TOTPConfig(..config, time: time)
 }
 
+/// Sets the time for the TOTP configuration to the current time.
 pub fn set_time_now(config: TOTPConfig) -> TOTPConfig {
   TOTPConfig(..config, time: birl.utc_now() |> birl.to_unix)
 }
 
+/// Sets the refresh period in seconds for the TOTP configuration.
+/// Most commonly used is 30 seconds.
 pub fn set_period(config: TOTPConfig, period: Int) -> TOTPConfig {
   TOTPConfig(..config, period: period)
 }
 
+/// Sets the digits for the TOTP configuration.
+/// Most commonly used is 6 digits.
+/// The spec allows for 6 to 8 digits.
 pub fn set_digits(config: TOTPConfig, digits: Int) -> TOTPConfig {
   TOTPConfig(..config, digits: digits)
 }
 
+/// Sets the algorithm for the TOTP configuration.
+/// Most commonly used is Sha1.
 pub fn set_algorithm(config: TOTPConfig, algorithm: TOTPAlgorithm) -> TOTPConfig {
   TOTPConfig(..config, algorithm: algorithm)
 }
 
+/// Generates a random 20 byte secret.
+/// 20 bytes is the recommended size according to the HOTP RFC4226 (https://tools.ietf.org/html/rfc4226#section-4).
 pub fn secret() -> Secret {
   crypto.strong_random_bytes(20)
 }
 
+/// Generates a random secret with the given size.
 pub fn secret_with_size(size: Int) {
   crypto.strong_random_bytes(size)
 }
 
+/// Generates a TOTP using the given secret and default configuration.
 pub fn totp(secret: Secret) -> OTP {
   default_config()
   |> set_secret(secret)
@@ -92,6 +115,7 @@ pub fn totp(secret: Secret) -> OTP {
   |> totp_from_config
 }
 
+/// Generates a TOTP using the given TOTP configuration.
 pub fn totp_from_config(config: TOTPConfig) -> OTP {
   let payload =
     int.floor_divide(config.time, config.period)
@@ -118,18 +142,26 @@ pub fn totp_from_config(config: TOTPConfig) -> OTP {
   |> OTP
 }
 
-pub fn verify(totp_input: String, secret: Secret) -> Bool {
+/// Verifies the given TOTP input with the given secret.
+pub fn verify(secret secret: Secret, input totp_input: String) -> Bool {
   totp(secret) == OTP(totp_input)
 }
 
+/// Verifies the given TOTP input with the given TOTP configuration.
+pub fn verify_from_config(config: TOTPConfig, input totp_input: String) -> Bool {
+  totp(config.secret) == OTP(totp_input)
+}
+
+/// Converts the OTP to a string.
 pub fn otp_to_string(otp: OTP) -> String {
   let OTP(otp) = otp
   otp
 }
 
+/// Converts a valid OTP string to an OTP type.
 pub fn string_to_otp(otp: String) -> Result(OTP, String) {
   case string.length(otp) {
-    6 ->
+    6 | 7 | 8 ->
       case valid_otp_code(otp) {
         True -> Ok(OTP(otp))
         False -> Error("Invalid OTP")
@@ -138,6 +170,8 @@ pub fn string_to_otp(otp: String) -> Result(OTP, String) {
   }
 }
 
+/// Generates an otpauth URI for the given secret, issuer and account name.
+/// The otpauth URI is used to generate QR codes for TOTP.
 pub fn otpauth_uri(
   secret secret: Secret,
   issuer issuer: String,
@@ -150,6 +184,7 @@ pub fn otpauth_uri(
   |> otpauth_uri_from_config
 }
 
+/// Generates an otpauth URI for the given TOTP configuration.
 pub fn otpauth_uri_from_config(config: TOTPConfig) -> String {
   let issuer = uri.percent_encode(config.issuer)
 
@@ -180,15 +215,18 @@ pub fn otpauth_uri_from_config(config: TOTPConfig) -> String {
   )
 }
 
+/// Checks if the string fits the otp format.
 fn valid_otp_code(otp: String) -> Bool {
-  let assert Ok(re) = regex.from_string("^[0-9]{6}$")
+  let assert Ok(re) = regex.from_string("^[0-9]{6,8}$")
   regex.check(re, otp)
 }
 
+/// Encodes the given BitArray to a base32 string.
 @external(erlang, "totally_ffi", "encode32")
 @external(javascript, "./totally_ffi.mjs", "encode32")
 fn encode32(input: BitArray) -> String
 
+/// Extracts the OTP bits from the HMAC hash.
 @external(javascript, "./totally_ffi.mjs", "extract_otp_bits")
 fn extract_otp_bits(hmac: BitArray) -> Int {
   let off_offset = bit_array.byte_size(hmac) * 8 - 4
