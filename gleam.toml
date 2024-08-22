@@ -1,7 +1,7 @@
 name = "totally"
 version = "1.0.0"
 
-description = "TOTP library for Gleam"
+description = "TOTP (Time-based One-Time Password) for Gleam"
 licences = ["Apache-2.0"]
 repository = { type = "github", user = "okkdev", repo = "totally" }
 
