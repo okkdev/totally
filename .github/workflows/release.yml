@@ -16,6 +16,8 @@ jobs:
           gleam-version: "1.4.0"
           rebar3-version: "3.23"
       - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - run: cargo install tomlq
       - run: |
           if [ "v$(tomlq version -f gleam.toml)" == "${{ github.ref_name }}" ]; then
