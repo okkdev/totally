@@ -20,6 +20,7 @@ pub fn totp_sha1_test() {
       secret: secret,
       time: time,
       period: 30,
+      last_use: 0,
       digits: 6,
       algorithm: Sha1,
       issuer: "",
@@ -37,6 +38,7 @@ pub fn totp_sha1_8digits_test() {
       secret: secret,
       time: time,
       period: 30,
+      last_use: 0,
       digits: 8,
       algorithm: Sha1,
       issuer: "",
@@ -54,6 +56,7 @@ pub fn totp_sha256_test() {
       secret: secret,
       time: time,
       period: 30,
+      last_use: 0,
       digits: 6,
       algorithm: Sha256,
       issuer: "",
@@ -71,6 +74,7 @@ pub fn totp_sha256_8digits_test() {
       secret: secret,
       time: time,
       period: 30,
+      last_use: 0,
       digits: 8,
       algorithm: Sha256,
       issuer: "",
@@ -88,6 +92,7 @@ pub fn totp_sha512_test() {
       secret: secret,
       time: time,
       period: 30,
+      last_use: 0,
       digits: 6,
       algorithm: Sha512,
       issuer: "",
@@ -105,6 +110,7 @@ pub fn totp_sha512_8digits_test() {
       secret: secret,
       time: time,
       period: 30,
+      last_use: 0,
       digits: 8,
       algorithm: Sha512,
       issuer: "",
@@ -149,4 +155,24 @@ pub fn otpauth_uri_test() {
   |> should.equal(
     "otpauth://totp/issuer:account?secret=JKVVN7MCLQ4OJFTNCZUGAESASCDAJII2&issuer=issuer&algorithm=SHA1&digits=6&period=30",
   )
+}
+
+pub fn reuse_test() {
+  let config =
+    totally.default_config()
+    |> totally.set_secret(secret)
+    |> totally.set_time(time)
+    |> totally.set_last_use(time + 5)
+
+  let otp =
+    totally.totp_from_config(config)
+    |> totally.otp_to_string
+
+  totally.verify_from_config(config, otp)
+  |> should.be_false
+
+  let config = totally.set_last_use(config, time - 30)
+
+  totally.verify_from_config(config, otp)
+  |> should.be_true
 }

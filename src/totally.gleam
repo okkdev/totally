@@ -11,6 +11,9 @@ import gleam/uri
 type Secret =
   BitArray
 
+type UNIXTimestamp =
+  Int
+
 /// One Time Password type
 pub opaque type OTP {
   OTP(String)
@@ -27,8 +30,9 @@ pub type TOTPAlgorithm {
 pub type TOTPConfig {
   TOTPConfig(
     secret: Secret,
-    time: Int,
+    time: UNIXTimestamp,
     period: Int,
+    last_use: UNIXTimestamp,
     digits: Int,
     algorithm: TOTPAlgorithm,
     issuer: String,
@@ -44,6 +48,7 @@ pub fn default_config() -> TOTPConfig {
     secret: bit_array.from_string(""),
     time: 0,
     period: 30,
+    last_use: 0,
     digits: 6,
     algorithm: Sha1,
     issuer: "",
@@ -68,7 +73,7 @@ pub fn set_account(config: TOTPConfig, account: String) -> TOTPConfig {
 }
 
 /// Sets the time in unix timestamp seconds for the TOTP configuration.
-pub fn set_time(config: TOTPConfig, time: Int) -> TOTPConfig {
+pub fn set_time(config: TOTPConfig, time: UNIXTimestamp) -> TOTPConfig {
   TOTPConfig(..config, time: time)
 }
 
@@ -81,6 +86,17 @@ pub fn set_time_now(config: TOTPConfig) -> TOTPConfig {
 /// Most commonly used is 30 seconds.
 pub fn set_period(config: TOTPConfig, period: Int) -> TOTPConfig {
   TOTPConfig(..config, period: period)
+}
+
+/// Sets the last use time in unix timestamp seconds for the TOTP configuration.
+/// Used to prevent replay attacks.
+pub fn set_last_use(config: TOTPConfig, last_use: UNIXTimestamp) -> TOTPConfig {
+  TOTPConfig(..config, last_use: last_use)
+}
+
+/// Sets the last use time for the TOTP configuration to the current time.
+pub fn set_last_use_now(config: TOTPConfig) -> TOTPConfig {
+  TOTPConfig(..config, last_use: birl.utc_now() |> birl.to_unix)
 }
 
 /// Sets the digits for the TOTP configuration.
@@ -147,9 +163,29 @@ pub fn verify(secret secret: Secret, input totp_input: String) -> Bool {
   totp(secret) == OTP(totp_input)
 }
 
+/// Verifies the given TOTP input with the given secret and last use time.
+/// The last use time is used to prevent replay attacks.
+pub fn verify_with_last_use(
+  secret secret: Secret,
+  input totp_input: String,
+  last_use last_use: UNIXTimestamp,
+) -> Bool {
+  let config =
+    default_config()
+    |> set_secret(secret)
+    |> set_time_now
+    |> set_last_use(last_use)
+  verify_from_config(config, totp_input)
+}
+
 /// Verifies the given TOTP input with the given TOTP configuration.
 pub fn verify_from_config(config: TOTPConfig, input totp_input: String) -> Bool {
-  totp(config.secret) == OTP(totp_input)
+  let match = totp_from_config(config) == OTP(totp_input)
+  let reused =
+    { int.floor_divide(config.time, config.period) |> result.unwrap(0) }
+    <= { int.floor_divide(config.last_use, config.period) |> result.unwrap(0) }
+
+  match && !reused
 }
 
 /// Converts the OTP to a string.
