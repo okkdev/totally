@@ -25,18 +25,16 @@ pub fn main() {
   let secret = totally.secret()
 
   // Generate an OTP auth URI. Display this as a QR code to the user.
-  totally.otpauth_uri(secret, issuer: "totally", account: "joe")
-  // => "otpauth://totp/totally:joe?secret=JKVVN7MCLQ4OJFTNCZUGAESASCDAJII2&issuer=totally&algorithm=SHA1&digits=6&period=30"
+  let assert Ok(uri) =
+    totally.otpauth_uri(secret: secret, issuer: "totally", account: "joe")
+  // => "otpauth://totp/totally:joe?secret=...&issuer=totally&algorithm=SHA1&digits=6&period=30"
 
   // Generate a TOTP if you need to send it to the user via another channel
-  totally.totp(secret)
-  // => OTP("492755")
+  let assert Ok(otp) = totally.totp(secret)
+  let code = totally.otp_to_string(otp)
 
-  let user_input = "492755"
-
-  // Verify a TOTP
-  totally.verify(secret, user_input)
-  // => true
+  // Check if a user-provided code is valid
+  let assert Ok(True) = totally.is_valid(secret: secret, input: user_input)
 }
 ```
 
@@ -48,33 +46,26 @@ import totally
 pub fn main() {
   let secret = totally.secret()
 
-  // Using the builder pattern
+  // Build a custom configuration
+  let assert Ok(config) = totally.new(secret)
   let config =
-    totally.default_config()
-    |> totally.set_secret(secret)
+    config
     |> totally.set_time_now
+    |> totally.set_algorithm(totally.Sha256)
+    |> totally.set_digits(totally.Eight)
     |> totally.set_issuer("totally")
     |> totally.set_account("joe")
 
-  // or the TOTPConfig type directly
-  let config =
-    TOTPConfig(
-      secret: secret,
-      time: 1_723_813_617,
-      algorithm: totally.SHA1,
-      digits: 6,
-      period: 30,
-      issuer: "totally",
-      account: "joe",
+  // Generate OTP and URI from config
+  let otp = totally.totp_from_config(config)
+  let uri = totally.otpauth_uri_from_config(config)
+
+  // Verify with replay protection using last use
+  let assert Ok(True) =
+    totally.is_valid_from_config(
+      totally.set_last_use(config, last_use_timestamp),
+      input: user_input,
     )
-
-  totally.otpauth_uri_from_config(config)
-
-  totally.totp_from_config(config)
-
-  let user_input = "492755"
-
-  totally.verify_from_config(config, user_input)
 }
 ```
 

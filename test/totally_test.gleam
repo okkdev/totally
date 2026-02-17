@@ -1,7 +1,7 @@
+import gleam/time/timestamp
 import gleeunit
-import gleeunit/should
 
-import totally.{Sha1, Sha256, Sha512, TOTPConfig}
+import totally.{Eight, Sha256, Sha512}
 
 pub fn main() {
   gleeunit.main()
@@ -15,164 +15,118 @@ const secret = <<
 const time = 1_723_813_617
 
 pub fn totp_sha1_test() {
-  let config =
-    TOTPConfig(
-      secret: secret,
-      time: time,
-      period: 30,
-      last_use: 0,
-      digits: 6,
-      algorithm: Sha1,
-      issuer: "",
-      account: "",
-    )
+  let assert Ok(config) = totally.new(secret)
 
-  totally.totp_from_config(config)
-  |> totally.otp_to_string
-  |> should.equal("223150")
+  let otp =
+    config
+    |> totally.set_time(timestamp.from_unix_seconds(time))
+    |> totally.totp_from_config
+
+  assert totally.otp_to_string(otp) == "223150"
 }
 
 pub fn totp_sha1_8digits_test() {
-  let config =
-    TOTPConfig(
-      secret: secret,
-      time: time,
-      period: 30,
-      last_use: 0,
-      digits: 8,
-      algorithm: Sha1,
-      issuer: "",
-      account: "",
-    )
+  let assert Ok(config) = totally.new(secret)
 
-  totally.totp_from_config(config)
-  |> totally.otp_to_string
-  |> should.equal("16223150")
+  let otp =
+    config
+    |> totally.set_time(timestamp.from_unix_seconds(time))
+    |> totally.set_digits(Eight)
+    |> totally.totp_from_config
+
+  assert totally.otp_to_string(otp) == "16223150"
 }
 
 pub fn totp_sha256_test() {
-  let config =
-    TOTPConfig(
-      secret: secret,
-      time: time,
-      period: 30,
-      last_use: 0,
-      digits: 6,
-      algorithm: Sha256,
-      issuer: "",
-      account: "",
-    )
+  let assert Ok(config) = totally.new(secret)
 
-  totally.totp_from_config(config)
-  |> totally.otp_to_string
-  |> should.equal("944204")
+  let otp =
+    config
+    |> totally.set_time(timestamp.from_unix_seconds(time))
+    |> totally.set_algorithm(Sha256)
+    |> totally.totp_from_config
+
+  assert totally.otp_to_string(otp) == "944204"
 }
 
 pub fn totp_sha256_8digits_test() {
-  let config =
-    TOTPConfig(
-      secret: secret,
-      time: time,
-      period: 30,
-      last_use: 0,
-      digits: 8,
-      algorithm: Sha256,
-      issuer: "",
-      account: "",
-    )
+  let assert Ok(config) = totally.new(secret)
 
-  totally.totp_from_config(config)
-  |> totally.otp_to_string
-  |> should.equal("31944204")
+  let otp =
+    config
+    |> totally.set_time(timestamp.from_unix_seconds(time))
+    |> totally.set_algorithm(Sha256)
+    |> totally.set_digits(Eight)
+    |> totally.totp_from_config
+
+  assert totally.otp_to_string(otp) == "31944204"
 }
 
 pub fn totp_sha512_test() {
-  let config =
-    TOTPConfig(
-      secret: secret,
-      time: time,
-      period: 30,
-      last_use: 0,
-      digits: 6,
-      algorithm: Sha512,
-      issuer: "",
-      account: "",
-    )
+  let assert Ok(config) = totally.new(secret)
 
-  totally.totp_from_config(config)
-  |> totally.otp_to_string
-  |> should.equal("635524")
+  let otp =
+    config
+    |> totally.set_time(timestamp.from_unix_seconds(time))
+    |> totally.set_algorithm(Sha512)
+    |> totally.totp_from_config
+
+  assert totally.otp_to_string(otp) == "635524"
 }
 
 pub fn totp_sha512_8digits_test() {
-  let config =
-    TOTPConfig(
-      secret: secret,
-      time: time,
-      period: 30,
-      last_use: 0,
-      digits: 8,
-      algorithm: Sha512,
-      issuer: "",
-      account: "",
-    )
+  let assert Ok(config) = totally.new(secret)
 
-  totally.totp_from_config(config)
-  |> totally.otp_to_string
-  |> should.equal("31635524")
+  let otp =
+    config
+    |> totally.set_time(timestamp.from_unix_seconds(time))
+    |> totally.set_algorithm(Sha512)
+    |> totally.set_digits(Eight)
+    |> totally.totp_from_config
+
+  assert totally.otp_to_string(otp) == "31635524"
 }
 
 pub fn string_test() {
-  "123"
-  |> totally.string_to_otp
-  |> should.be_error
-
-  "123abc"
-  |> totally.string_to_otp
-  |> should.be_error
-
-  "123456"
-  |> totally.string_to_otp
-  |> should.be_ok
+  let assert Error(totally.InvalidOtpLength) = totally.string_to_otp("123")
+  let assert Error(totally.InvalidOtp) = totally.string_to_otp("123abc")
+  let assert Ok(_) = totally.string_to_otp("123456")
 }
 
 pub fn valid_test() {
   let secret = totally.secret()
 
-  let input =
-    totally.totp(secret)
-    |> totally.otp_to_string
+  let assert Ok(otp) = totally.totp(secret)
+  let input = totally.otp_to_string(otp)
 
-  totally.verify(secret, input)
-  |> should.be_true
+  let assert Ok(True) = totally.is_valid(secret: secret, input: input)
 
-  totally.verify(secret, "123")
-  |> should.be_false
+  let assert Ok(False) = totally.is_valid(secret: secret, input: "123")
 }
 
 pub fn otpauth_uri_test() {
-  totally.otpauth_uri(secret, issuer: "issuer", account: "account")
-  |> should.equal(
-    "otpauth://totp/issuer:account?secret=JKVVN7MCLQ4OJFTNCZUGAESASCDAJII2&issuer=issuer&algorithm=SHA1&digits=6&period=30",
-  )
+  let assert Ok(uri) =
+    totally.otpauth_uri(secret: secret, issuer: "issuer", account: "account")
+
+  assert uri
+    == "otpauth://totp/issuer:account?secret=JKVVN7MCLQ4OJFTNCZUGAESASCDAJII2&issuer=issuer&algorithm=SHA1&digits=6&period=30"
 }
 
 pub fn reuse_test() {
-  let config =
-    totally.default_config()
-    |> totally.set_secret(secret)
-    |> totally.set_time(time)
-    |> totally.set_last_use(time + 5)
+  let assert Ok(config) = totally.new(secret)
 
-  let otp =
+  // Generate OTP for "now"
+  let config = totally.set_time_now(config)
+  let input =
     totally.totp_from_config(config)
     |> totally.otp_to_string
 
-  totally.verify_from_config(config, otp)
-  |> should.be_false
+  // last_use is in the current timestep — should be rejected as reused
+  let reused_config = totally.set_last_use_now(config)
+  assert !totally.is_valid_from_config(reused_config, input)
 
-  let config = totally.set_last_use(config, time - 30)
-
-  totally.verify_from_config(config, otp)
-  |> should.be_true
+  // last_use is far in the past — should be accepted
+  let fresh_config =
+    totally.set_last_use(config, timestamp.from_unix_seconds(0))
+  assert totally.is_valid_from_config(fresh_config, input)
 }
