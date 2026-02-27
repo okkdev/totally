@@ -61,11 +61,10 @@ pub fn main() {
   let uri = totally.otpauth_uri_from_config(config)
 
   // Verify with replay protection using last use
-  let assert Ok(True) =
-    totally.is_valid_from_config(
-      totally.set_last_use(config, last_use_timestamp),
-      input: user_input,
-    )
+  assert totally.is_valid_from_config(
+    totally.set_last_use(config, last_use_timestamp),
+    input: user_input,
+  )
 }
 ```
 
