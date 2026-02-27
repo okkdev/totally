@@ -12,7 +12,7 @@ Inspired by [NimbleTOTP](https://github.com/dashbitco/nimble_totp) and [OTPAuth]
 ## Installation
 
 ```sh
-gleam add totally
+gleam add totally@2
 ```
 
 ## Basic Usage
