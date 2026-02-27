@@ -165,7 +165,7 @@ pub fn totp_from_config(config: TotpConfig) -> Otp {
   let payload = timestep(config.time, config.period)
 
   let num_digits = digits_to_int(config.digits)
-  let rem_digits = digits_to_modulo(config.digits)
+  let rem_digits = digits_to_power(config.digits)
 
   let algo = case config.algorithm {
     Sha1 -> crypto.Sha1
@@ -293,7 +293,7 @@ fn digits_to_int(digits: Digits) -> Int {
   }
 }
 
-fn digits_to_modulo(digits: Digits) -> Int {
+fn digits_to_power(digits: Digits) -> Int {
   case digits {
     Six -> 1_000_000
     Seven -> 10_000_000
