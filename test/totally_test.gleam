@@ -87,9 +87,24 @@ pub fn totp_sha512_8digits_test() {
   assert totally.otp_to_string(otp) == "31635524"
 }
 
+pub fn new_insecure_secret_test() {
+  let assert Error(totally.InsecureSecret) = totally.new(<<1, 2, 3>>)
+}
+
+pub fn set_period_invalid_test() {
+  let assert Ok(config) = totally.new(secret)
+  assert Error(totally.InvalidPeriod) == totally.set_period(config, 0)
+  assert Error(totally.InvalidPeriod) == totally.set_period(config, -1)
+}
+
+pub fn secret_with_size_test() {
+  assert Error(totally.InsecureSecret) == totally.secret_with_size(15)
+  let assert Ok(_) = totally.secret_with_size(16)
+}
+
 pub fn string_test() {
-  let assert Error(totally.InvalidOtpLength) = totally.string_to_otp("123")
-  let assert Error(totally.InvalidOtp) = totally.string_to_otp("123abc")
+  assert Error(totally.InvalidOtpLength) == totally.string_to_otp("123")
+  assert Error(totally.InvalidOtp) == totally.string_to_otp("123abc")
   let assert Ok(_) = totally.string_to_otp("123456")
 }
 
@@ -99,9 +114,8 @@ pub fn valid_test() {
   let assert Ok(otp) = totally.totp(secret)
   let input = totally.otp_to_string(otp)
 
-  let assert Ok(True) = totally.is_valid(secret: secret, input: input)
-
-  let assert Ok(False) = totally.is_valid(secret: secret, input: "123")
+  assert Ok(True) == totally.is_valid(secret: secret, input: input)
+  assert Ok(False) == totally.is_valid(secret: secret, input: "123")
 }
 
 pub fn otpauth_uri_test() {
@@ -110,6 +124,43 @@ pub fn otpauth_uri_test() {
 
   assert uri
     == "otpauth://totp/issuer:account?secret=JKVVN7MCLQ4OJFTNCZUGAESASCDAJII2&issuer=issuer&algorithm=SHA1&digits=6&period=30"
+}
+
+pub fn otpauth_uri_from_config_test() {
+  let assert Ok(config) = totally.new(secret)
+  let assert Ok(config) =
+    config
+    |> totally.set_algorithm(Sha256)
+    |> totally.set_digits(Eight)
+    |> totally.set_issuer("my app")
+    |> totally.set_account("joe")
+    |> totally.set_period(60)
+
+  assert totally.otpauth_uri_from_config(config)
+    == "otpauth://totp/my%20app:joe?secret=JKVVN7MCLQ4OJFTNCZUGAESASCDAJII2&issuer=my%20app&algorithm=SHA256&digits=8&period=60"
+}
+
+pub fn is_valid_with_last_use_test() {
+  let secret = totally.secret()
+
+  let assert Ok(otp) = totally.totp(secret)
+  let input = totally.otp_to_string(otp)
+
+  // last_use far in the past — should be valid
+  assert Ok(True)
+    == totally.is_valid_with_last_use(
+      secret: secret,
+      input: input,
+      last_use: timestamp.from_unix_seconds(0),
+    )
+
+  // last_use is now — should be rejected as reused
+  assert Ok(False)
+    == totally.is_valid_with_last_use(
+      secret: secret,
+      input: input,
+      last_use: timestamp.system_time(),
+    )
 }
 
 pub fn reuse_test() {
