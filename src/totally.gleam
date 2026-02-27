@@ -202,13 +202,12 @@ pub fn is_valid_with_last_use(
 ) -> Result(Bool, TotpError) {
   use config <- result.try(new(secret))
   config
-  |> set_time_now
   |> set_last_use(last_use)
   |> is_valid_from_config(totp_input)
   |> Ok
 }
 
-/// Verifies the given TOTP input with the given TOTP configuration.
+/// Checks if the given TOTP input matches the current code for the config.
 /// Automatically uses the current time for verification.
 pub fn is_valid_from_config(
   config: TotpConfig,
@@ -319,12 +318,60 @@ fn all_digits(otp: String) -> Bool {
 }
 
 /// Encodes the given BitArray to a base32 string.
-@external(erlang, "totally_ffi", "encode32")
-@external(javascript, "./totally_ffi.mjs", "encode32")
-fn encode32(input: BitArray) -> String
+fn encode32(input: BitArray) -> String {
+  do_encode32(input, "")
+}
+
+fn do_encode32(input: BitArray, acc: String) -> String {
+  case input {
+    <<i:size(5), rest:bits>> -> do_encode32(rest, acc <> base32_char(i))
+    <<i:size(4)>> -> acc <> base32_char(int.bitwise_shift_left(i, 1))
+    <<i:size(3)>> -> acc <> base32_char(int.bitwise_shift_left(i, 2))
+    <<i:size(2)>> -> acc <> base32_char(int.bitwise_shift_left(i, 3))
+    <<i:size(1)>> -> acc <> base32_char(int.bitwise_shift_left(i, 4))
+    _ -> acc
+  }
+}
+
+fn base32_char(i: Int) -> String {
+  case i {
+    0 -> "A"
+    1 -> "B"
+    2 -> "C"
+    3 -> "D"
+    4 -> "E"
+    5 -> "F"
+    6 -> "G"
+    7 -> "H"
+    8 -> "I"
+    9 -> "J"
+    10 -> "K"
+    11 -> "L"
+    12 -> "M"
+    13 -> "N"
+    14 -> "O"
+    15 -> "P"
+    16 -> "Q"
+    17 -> "R"
+    18 -> "S"
+    19 -> "T"
+    20 -> "U"
+    21 -> "V"
+    22 -> "W"
+    23 -> "X"
+    24 -> "Y"
+    25 -> "Z"
+    26 -> "2"
+    27 -> "3"
+    28 -> "4"
+    29 -> "5"
+    30 -> "6"
+    31 -> "7"
+    _ -> ""
+  }
+}
 
 /// Extracts the OTP bits from the HMAC hash.
-@external(javascript, "./totally_ffi.mjs", "extract_otp_bits")
 fn extract_otp_bits(hmac: BitArray) -> Int {
   let off_offset = bit_array.byte_size(hmac) * 8 - 4
   let assert <<_:size(off_offset), offset:int-size(4)>> = hmac

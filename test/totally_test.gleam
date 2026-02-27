@@ -12,6 +12,13 @@ const secret = <<
   161, 26,
 >>
 
+const secret_16 = <<1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>>
+
+const secret_32 = <<
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+  23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+>>
+
 const time = 1_723_813_617
 
 pub fn totp_sha1_test() {
@@ -85,6 +92,44 @@ pub fn totp_sha512_8digits_test() {
     |> totally.totp_from_config
 
   assert totally.otp_to_string(otp) == "31635524"
+}
+
+pub fn totp_16byte_secret_test() {
+  let assert Ok(config) = totally.new(secret_16)
+
+  let otp =
+    config
+    |> totally.set_time(timestamp.from_unix_seconds(time))
+    |> totally.totp_from_config
+
+  assert totally.otp_to_string(otp) == "299965"
+}
+
+pub fn totp_32byte_secret_test() {
+  let assert Ok(config) = totally.new(secret_32)
+
+  let otp =
+    config
+    |> totally.set_time(timestamp.from_unix_seconds(time))
+    |> totally.totp_from_config
+
+  assert totally.otp_to_string(otp) == "753527"
+}
+
+pub fn otpauth_uri_16byte_secret_test() {
+  let assert Ok(uri) =
+    totally.otpauth_uri(secret: secret_16, issuer: "test", account: "user")
+
+  assert uri
+    == "otpauth://totp/test:user?secret=AEBAGBAFAYDQQCIKBMGA2DQPCA&issuer=test&algorithm=SHA1&digits=6&period=30"
+}
+
+pub fn otpauth_uri_32byte_secret_test() {
+  let assert Ok(uri) =
+    totally.otpauth_uri(secret: secret_32, issuer: "test", account: "user")
+
+  assert uri
+    == "otpauth://totp/test:user?secret=AEBAGBAFAYDQQCIKBMGA2DQPCAIREEYUCULBOGAZDINRYHI6D4QA&issuer=test&algorithm=SHA1&digits=6&period=30"
 }
 
 pub fn new_insecure_secret_test() {
